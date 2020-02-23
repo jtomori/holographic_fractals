@@ -1,2 +1,2 @@
-# holographic_fractals
-Holographic fractals on Voxon volumetric display
+# Holographic Fractals
+Holographic fractals for Voxon volumetric display

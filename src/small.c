@@ -14,6 +14,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
     // Default settings
     vw.usecol = 1; // Color rendering
+	vw.smear = 1;
 
 	if (voxie_init(&vw) < 0) return(-1);
 
@@ -30,6 +31,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		voxie_drawbox(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz,1,0xffffff);
 
 		// Do stuff here
+		voxie_drawvox(&vf, 0, 0, 0, 0x00ff00);
 
 		voxie_frame_end();
 		voxie_getvw(&vw);

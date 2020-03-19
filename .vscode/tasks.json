@@ -12,6 +12,7 @@
                 "${file}",
                 "-I${workspaceFolder}\\sdk",
                 "-L${workspaceFolder}\\sdk",
+                "-O3",
                 "-o",
                 "${workspaceFolder}\\build\\${fileBasenameNoExtension}.exe"
             ],
@@ -25,6 +26,25 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "type": "shell",
+            "label": "gcc.exe build active file - debug",
+            "command": "C:\\mingw-w64\\x86_64-8.1.0-win32-seh-rt_v6-rev0\\mingw64\\bin\\gcc.exe",
+            "args": [
+                "-g",
+                "${file}",
+                "-I${workspaceFolder}\\sdk",
+                "-L${workspaceFolder}\\sdk",
+                "-o",
+                "${workspaceFolder}\\build\\${fileBasenameNoExtension}.exe"
+            ],
+            "options": {
+                "cwd": "C:\\mingw-w64\\x86_64-8.1.0-win32-seh-rt_v6-rev0\\mingw64\\bin"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }

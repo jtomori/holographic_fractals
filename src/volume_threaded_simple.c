@@ -1,3 +1,7 @@
+/*
+Trying threads
+*/
+
 #include "voxiebox.h"
 #include <stdlib.h>
 #include <math.h>

@@ -1,3 +1,8 @@
+/*
+Trying to split filling of the volume between threads.
+Not finished, currently segfaults after a couple of frames.
+*/
+
 #include "voxiebox.h"
 #include <stdlib.h>
 #include <math.h>

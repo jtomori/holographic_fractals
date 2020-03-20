@@ -1,11 +1,12 @@
 #include "voxiebox.h"
 #include <stdlib.h>
 #include <math.h>
-
-void draw(voxie_frame_t *vf, point3d p);
-float length(point3d p);
+#include <process.h>
 
 static voxie_wind_t vw;
+
+void thread_draw_box_1(void *vf);
+void thread_draw_box_2(void *vf);
 
 int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdshow)
 {
@@ -34,22 +35,10 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		voxie_drawbox(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz,1,0xffffff);
 
 		// Do stuff here
-		point3d voxel_size;
-		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * 6.0f;
-		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * 6.0f;
-		voxel_size.z = (2.0f * vw.aspz) / 200.0f * 3.0f;
-
-		point3d p_world;
-		for (p_world.x = -vw.aspx; p_world.x < vw.aspx; p_world.x += voxel_size.x)
-		{
-			for (p_world.y = -vw.aspy; p_world.y < vw.aspy; p_world.y += voxel_size.y)
-			{
-				for (p_world.z = -vw.aspz; p_world.z < vw.aspz; p_world.z += voxel_size.z)
-				{
-					draw(&vf, p_world);
-				}
-			}
-		}
+		// thread_draw_box(&vf, -0.5f, -0.5f, -0.2f, 0.0f, 0.0f, 0.2f,1,0xff0000);
+		// thread_draw_box(&vf, 0.0f, 0.0f, -0.2f, 0.5f, 0.5f, 0.2f,1,0x00ff00);
+		_beginthread(thread_draw_box_1, 0, &vf);
+		_beginthread(thread_draw_box_2, 0, &vf);
 
 		voxie_frame_end();
 		voxie_getvw(&vw);
@@ -59,13 +48,14 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	return 0;
 }
 
-void draw(voxie_frame_t *vf, point3d p)
+void thread_draw_box_1(void *vf)
 {
-	if (length(p) <= 0.35f)
-		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+	voxie_frame_t *my_vf = (voxie_frame_t *)vf;
+	voxie_drawbox(vf, -0.5f, -0.5f, -0.2f, 0.0f, 0.0f, 0.2f,1,0xff0000);
 }
 
-float length(point3d p)
+void thread_draw_box_2(void *vf)
 {
-	return sqrtf(p.x*p.x + p.y*p.y + p.z*p.z);
+	voxie_frame_t *my_vf = (voxie_frame_t *)vf;
+	voxie_drawbox(vf, 0.0f, 0.0f, -0.2f, 0.5f, 0.5f, 0.2f,1,0x00ff00);
 }

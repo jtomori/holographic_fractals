@@ -1,9 +1,19 @@
 #include "voxiebox.h"
 #include <stdlib.h>
 #include <math.h>
+#include <process.h>
+
+typedef struct
+{
+	float start;
+	float end;
+	voxie_frame_t *vf;
+	point3d voxel_size;
+} iter_3d_thread_args;
 
 void draw(voxie_frame_t *vf, point3d p);
 float length(point3d p);
+void iter_3d_threaded(void *args);
 
 static voxie_wind_t vw;
 
@@ -39,17 +49,22 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * 6.0f;
 		voxel_size.z = (2.0f * vw.aspz) / 200.0f * 3.0f;
 
-		point3d p_world;
-		for (p_world.x = -vw.aspx; p_world.x < vw.aspx; p_world.x += voxel_size.x)
+		int threads = 1;
+		HANDLE thread_handles[threads];
+		iter_3d_thread_args thread_args[threads];
+
+		float x_section = (2.0f * vw.aspx) / threads;
+		for (int i = 0; i < threads; i++)
 		{
-			for (p_world.y = -vw.aspy; p_world.y < vw.aspy; p_world.y += voxel_size.y)
-			{
-				for (p_world.z = -vw.aspz; p_world.z < vw.aspz; p_world.z += voxel_size.z)
-				{
-					draw(&vf, p_world);
-				}
-			}
+			thread_args[i].start = -vw.aspx + i * x_section;
+			thread_args[i].end = thread_args[i].start + x_section;
+			thread_args[i].vf = &vf;
+			thread_args[i].voxel_size = voxel_size;
+
+			_beginthread(iter_3d_threaded, 0, &thread_args[i]);
 		}
+
+		WaitForMultipleObjects(threads, thread_handles, TRUE, INFINITE);
 
 		voxie_frame_end();
 		voxie_getvw(&vw);
@@ -57,6 +72,24 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
 	voxie_uninit(0); // Close window and unload voxiebox.dll
 	return 0;
+}
+
+void iter_3d_threaded(void *pargs)
+{
+	iter_3d_thread_args *args = (iter_3d_thread_args *)pargs;
+	
+	point3d p_world;
+	for (p_world.x = args->start; p_world.x < args->end; p_world.x += args->voxel_size.x)
+	{
+		for (p_world.y = -vw.aspy; p_world.y < vw.aspy; p_world.y += args->voxel_size.y)
+		{
+			for (p_world.z = -vw.aspz; p_world.z < vw.aspz; p_world.z += args->voxel_size.z)
+			{
+				voxie_drawvox(args->vf, p_world.x, p_world.y, p_world.z, 0xffffff);
+			}
+		}
+	}
+	_endthread();
 }
 
 void draw(voxie_frame_t *vf, point3d p)

@@ -1,6 +1,5 @@
 /*
-Trying to split filling of the volume between threads.
-Not finished, currently segfaults after a couple of frames.
+Trying to split filling of the volume between multiple threads.
 */
 
 #include "voxiebox.h"
@@ -32,7 +31,12 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
     // Default settings
     vw.usecol = 1; // Color rendering
-	vw.smear = 1;
+	vw.useemu = 2; // Simulation
+
+	// Threads count
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	int threads = max(1, sysinfo.dwNumberOfProcessors - 1);
 
 	if (voxie_init(&vw) < 0) return(-1);
 
@@ -50,11 +54,10 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
 		// Do stuff here
 		point3d voxel_size;
-		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * 6.0f;
-		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * 6.0f;
-		voxel_size.z = (2.0f * vw.aspz) / 200.0f * 3.0f;
+		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * 5.0f;
+		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * 5.0f;
+		voxel_size.z = (2.0f * vw.aspz) / 200.0f * 2.0f;
 
-		int threads = 1;
 		HANDLE thread_handles[threads];
 		iter_3d_thread_args thread_args[threads];
 
@@ -66,9 +69,10 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 			thread_args[i].vf = &vf;
 			thread_args[i].voxel_size = voxel_size;
 
-			_beginthread(iter_3d_threaded, 0, &thread_args[i]);
+			thread_handles[i] = (HANDLE)_beginthread(iter_3d_threaded, 0, &thread_args[i]);
 		}
 
+		// Wait for threads to finish up
 		WaitForMultipleObjects(threads, thread_handles, TRUE, INFINITE);
 
 		voxie_frame_end();
@@ -94,7 +98,7 @@ void iter_3d_threaded(void *pargs)
 			}
 		}
 	}
-	_endthread();
+	// printf("Finished!");
 }
 
 void draw(voxie_frame_t *vf, point3d p)

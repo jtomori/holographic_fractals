@@ -39,10 +39,12 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		voxie_drawbox(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz,1,0xffffff);
 
 		// Do stuff here
-		// thread_draw_box(&vf, -0.5f, -0.5f, -0.2f, 0.0f, 0.0f, 0.2f,1,0xff0000);
-		// thread_draw_box(&vf, 0.0f, 0.0f, -0.2f, 0.5f, 0.5f, 0.2f,1,0x00ff00);
-		_beginthread(thread_draw_box_1, 0, &vf);
-		_beginthread(thread_draw_box_2, 0, &vf);
+		HANDLE a = (HANDLE)_beginthread(thread_draw_box_1, 0, &vf);
+		HANDLE b = (HANDLE)_beginthread(thread_draw_box_2, 0, &vf);
+		
+		// Wait for threads
+		WaitForSingleObject(a, INFINITE);
+		WaitForSingleObject(b, INFINITE);
 
 		voxie_frame_end();
 		voxie_getvw(&vw);

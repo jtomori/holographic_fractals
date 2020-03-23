@@ -1,3 +1,7 @@
+/*
+Filling the whole volume
+*/
+
 #include "voxiebox.h"
 #include <stdlib.h>
 #include <math.h>
@@ -17,7 +21,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
     // Default settings
     vw.usecol = 1; // Color rendering
-	vw.smear = 1;
+	vw.useemu = 2; // Simulation
 
 	if (voxie_init(&vw) < 0) return(-1);
 
@@ -35,9 +39,9 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
 		// Do stuff here
 		point3d voxel_size;
-		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * 6.0f;
-		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * 6.0f;
-		voxel_size.z = (2.0f * vw.aspz) / 200.0f * 3.0f;
+		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * 5.0f;
+		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * 5.0f;
+		voxel_size.z = (2.0f * vw.aspz) / 200.0f * 2.0f;
 
 		point3d p_world;
 		for (p_world.x = -vw.aspx; p_world.x < vw.aspx; p_world.x += voxel_size.x)
@@ -61,8 +65,8 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
 void draw(voxie_frame_t *vf, point3d p)
 {
-	if (length(p) <= 0.35f)
-		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+	// if (length(p) <= 0.35f) // Sphere
+		voxie_drawvox(vf, p.x, p.y, p.z, 0xffffff);
 }
 
 float length(point3d p)

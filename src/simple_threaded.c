@@ -1,11 +1,12 @@
 /*
-Trying threads
+Trying threads - a simple example drawing two cubes, each from a separate thread.
 */
 
-#include "voxiebox.h"
 #include <stdlib.h>
 #include <math.h>
 #include <process.h>
+
+#include "voxiebox.h"
 
 static voxie_wind_t vw;
 

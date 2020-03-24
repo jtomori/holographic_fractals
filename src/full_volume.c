@@ -1,13 +1,13 @@
 /*
-Filling the whole volume
+Example showing how to fill the whole volume.
 */
 
-#include "voxiebox.h"
 #include <stdlib.h>
 #include <math.h>
 
+#include "voxiebox.h"
+
 void draw(voxie_frame_t *vf, point3d p);
-float length(point3d p);
 
 static voxie_wind_t vw;
 
@@ -65,11 +65,5 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
 void draw(voxie_frame_t *vf, point3d p)
 {
-	// if (length(p) <= 0.35f) // Sphere
 		voxie_drawvox(vf, p.x, p.y, p.z, 0xffffff);
-}
-
-float length(point3d p)
-{
-	return sqrtf(p.x*p.x + p.y*p.y + p.z*p.z);
 }

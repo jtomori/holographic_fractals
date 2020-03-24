@@ -1,5 +1,5 @@
 /*
-Example showing how to fill the whole volume - in parallel, with each thread filling a partition of the volume (split along x-axis).
+Main App
 */
 
 #include <stdlib.h>
@@ -16,6 +16,8 @@ typedef struct
 	point3d voxel_size;
 } iter_3d_thread_args;
 
+void draw_sphere(voxie_frame_t *vf, point3d p);
+float length2(point3d p);
 void iter_3d_threaded(void *args);
 
 static voxie_wind_t vw;
@@ -93,9 +95,21 @@ void iter_3d_threaded(void *pargs)
 		{
 			for (p_world.z = -vw.aspz; p_world.z < vw.aspz; p_world.z += args->voxel_size.z)
 			{
-				voxie_drawvox(args->vf, p_world.x, p_world.y, p_world.z, 0xffffff);
+				// voxie_drawvox(args->vf, p_world.x, p_world.y, p_world.z, 0xffffff);
+				draw_sphere(args->vf, p_world);
 			}
 		}
 	}
 	// printf("Finished!");
+}
+
+void draw_sphere(voxie_frame_t *vf, point3d p)
+{
+	if (length2(p) <= 0.35f)
+		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+}
+
+float length2(point3d p)
+{
+	return p.x*p.x + p.y*p.y + p.z*p.z;
 }

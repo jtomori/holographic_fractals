@@ -18,7 +18,7 @@ typedef struct
 
 void draw_sphere(voxie_frame_t *vf, point3d p);
 float length2(point3d p);
-void iter_3d_threaded(void *args);
+unsigned __stdcall iter_3d_threaded(void *args);
 
 static voxie_wind_t vw;
 
@@ -70,11 +70,16 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 			thread_args[i].vf = &vf;
 			thread_args[i].voxel_size = voxel_size;
 
-			thread_handles[i] = (HANDLE)_beginthread(iter_3d_threaded, 0, &thread_args[i]);
+			thread_handles[i] = (HANDLE)_beginthreadex(NULL, 0, &iter_3d_threaded, &thread_args[i], 0, NULL);
 		}
 
 		// Wait for threads to finish up
 		WaitForMultipleObjects(threads, thread_handles, TRUE, INFINITE);
+
+		for (int i = 0; i < threads; i++)
+		{
+			CloseHandle(thread_handles[i]);
+		}
 
 		voxie_frame_end();
 		voxie_getvw(&vw);
@@ -84,7 +89,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	return 0;
 }
 
-void iter_3d_threaded(void *pargs)
+unsigned __stdcall iter_3d_threaded(void *pargs)
 {
 	iter_3d_thread_args *args = (iter_3d_thread_args *)pargs;
 	
@@ -95,17 +100,18 @@ void iter_3d_threaded(void *pargs)
 		{
 			for (p_world.z = -vw.aspz; p_world.z < vw.aspz; p_world.z += args->voxel_size.z)
 			{
-				// voxie_drawvox(args->vf, p_world.x, p_world.y, p_world.z, 0xffffff);
 				draw_sphere(args->vf, p_world);
 			}
 		}
 	}
 	// printf("Finished!");
+	_endthreadex(0);
+	return 0;
 }
 
 void draw_sphere(voxie_frame_t *vf, point3d p)
 {
-	if (length2(p) <= 0.35f)
+	if (length2(p) <= 0.1f)
 		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
 }
 

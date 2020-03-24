@@ -16,7 +16,7 @@ typedef struct
 	point3d voxel_size;
 } iter_3d_thread_args;
 
-void iter_3d_threaded(void *args);
+unsigned __stdcall iter_3d_threaded(void *args);
 
 static voxie_wind_t vw;
 
@@ -68,11 +68,16 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 			thread_args[i].vf = &vf;
 			thread_args[i].voxel_size = voxel_size;
 
-			thread_handles[i] = (HANDLE)_beginthread(iter_3d_threaded, 0, &thread_args[i]);
+			thread_handles[i] = (HANDLE)_beginthreadex(NULL, 0, &iter_3d_threaded, &thread_args[i], 0, NULL);
 		}
 
 		// Wait for threads to finish up
 		WaitForMultipleObjects(threads, thread_handles, TRUE, INFINITE);
+
+		for (int i = 0; i < threads; i++)
+		{
+			CloseHandle(thread_handles[i]);
+		}
 
 		voxie_frame_end();
 		voxie_getvw(&vw);
@@ -82,7 +87,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	return 0;
 }
 
-void iter_3d_threaded(void *pargs)
+unsigned __stdcall iter_3d_threaded(void *pargs)
 {
 	iter_3d_thread_args *args = (iter_3d_thread_args *)pargs;
 	
@@ -98,4 +103,6 @@ void iter_3d_threaded(void *pargs)
 		}
 	}
 	// printf("Finished!");
+	_endthreadex(0);
+	return 0;
 }

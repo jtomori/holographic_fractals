@@ -10,8 +10,8 @@ Trying threads - a simple example drawing two cubes, each from a separate thread
 
 static voxie_wind_t vw;
 
-void thread_draw_box_1(void *vf);
-void thread_draw_box_2(void *vf);
+unsigned __stdcall thread_draw_box_1(void *vf);
+unsigned __stdcall thread_draw_box_2(void *vf);
 
 int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdshow)
 {
@@ -40,12 +40,15 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		voxie_drawbox(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz,1,0xffffff);
 
 		// Do stuff here
-		HANDLE a = (HANDLE)_beginthread(thread_draw_box_1, 0, &vf);
-		HANDLE b = (HANDLE)_beginthread(thread_draw_box_2, 0, &vf);
+		HANDLE a = (HANDLE)_beginthreadex(NULL, 0, &thread_draw_box_1, &vf, 0, NULL);
+		HANDLE b = (HANDLE)_beginthreadex(NULL, 0, &thread_draw_box_2, &vf, 0, NULL);
 		
 		// Wait for threads
 		WaitForSingleObject(a, INFINITE);
 		WaitForSingleObject(b, INFINITE);
+
+		CloseHandle(a);
+		CloseHandle(b);
 
 		voxie_frame_end();
 		voxie_getvw(&vw);
@@ -55,14 +58,20 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	return 0;
 }
 
-void thread_draw_box_1(void *vf)
+unsigned __stdcall thread_draw_box_1(void *vf)
 {
 	voxie_frame_t *my_vf = (voxie_frame_t *)vf;
 	voxie_drawbox(vf, -0.5f, -0.5f, -0.2f, 0.0f, 0.0f, 0.2f,1,0xff0000);
+
+	_endthreadex(0);
+	return 0;
 }
 
-void thread_draw_box_2(void *vf)
+unsigned __stdcall thread_draw_box_2(void *vf)
 {
 	voxie_frame_t *my_vf = (voxie_frame_t *)vf;
 	voxie_drawbox(vf, 0.0f, 0.0f, -0.2f, 0.5f, 0.5f, 0.2f,1,0x00ff00);
+
+	_endthreadex(0);
+	return 0;
 }

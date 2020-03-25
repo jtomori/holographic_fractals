@@ -26,13 +26,14 @@
         },
         {
             "type": "shell",
-            "label": "gcc.exe build active file - debug",
+            "label": "gcc.exe build active file - debug, profiling",
             "command": "C:\\mingw-w64\\x86_64-8.1.0-win32-seh-rt_v6-rev0\\mingw64\\bin\\gcc.exe",
             "args": [
                 "-g",
                 "${file}",
                 "-I${workspaceFolder}\\sdk",
                 "-L${workspaceFolder}\\sdk",
+                "-pg",
                 "-o",
                 "${workspaceFolder}\\build\\${fileBasenameNoExtension}.exe"
             ],

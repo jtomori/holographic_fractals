@@ -38,53 +38,62 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	voxie_frame_t vf;
 	voxie_inputs_t in;
 	double tim = 0.0, otim, dtim;
+	char key;
+	point3d voxel_size;
+	float x_section;
 
-	if (voxie_load(&vw) < 0) return(-1);
+	if (voxie_load(&vw) < 0)
+		return -1;
 
     // Default settings
     vw.usecol = 1; // Color rendering
 	vw.useemu = 2; // Simulation
+	float quality = 1.0f;
 
 	// Threads count
 	SYSTEM_INFO sysinfo;
 	GetSystemInfo(&sysinfo);
 	int threads = max(1, sysinfo.dwNumberOfProcessors - 1);
 
-	// Args TDOD: finish, write help message for usage
-	int quality = 2;
-	LPWSTR *argv;
-    int argc;
- 
-	argv = CommandLineToArgvW(GetCommandLine(), &argc);
-	if (argv != NULL)
-	{
-		quality = atoi(argv[0]);
-	}
+	HANDLE thread_handles[threads];
+	iter_3d_thread_args thread_args[threads];
 
-	if (voxie_init(&vw) < 0) return(-1);
+	if (voxie_init(&vw) < 0)
+		return -1;
 
 	while (!voxie_breath(&in))
 	{
-		otim = tim; tim = voxie_klock(); dtim = tim-otim;
+		otim = tim;
+		tim = voxie_klock();
+		dtim = tim-otim;
 
-		if (voxie_keystat(0x1)) { voxie_quitloop(); } // ESC quit
+		// Key presses
+		// printf("%d %x\n", key, key);
 
+		if (voxie_keystat(0x1))
+			voxie_quitloop(); // ESC quit
+
+		key = (char)voxie_keyread();
+		if (key == 0x2d) // -
+			quality += 0.25f;
+		if (key == 0x2b) // +
+			quality -= 0.25f;
+		
+		quality = fmaxf(fminf(quality, 3.0f), 0.0f);
+
+		// Start frame
 		voxie_frame_start(&vf);
 		voxie_setview(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz);
 
-		// Draw wireframe box around volume
+		// Draw volume bbox
 		voxie_drawbox(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz,1,0xffffff);
 
 		// Do stuff here
-		point3d voxel_size;
-		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * 5.0f; // TODO: Expose those multipliers to program arguments
-		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * 5.0f;
-		voxel_size.z = (2.0f * vw.aspz) / 200.0f * 2.0f;
+		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * (1.0f + quality * 4.0f);
+		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * (1.0f + quality * 4.0f);
+		voxel_size.z = (2.0f * vw.aspz) / 200.0f * (1.0f + quality);
 
-		HANDLE thread_handles[threads];
-		iter_3d_thread_args thread_args[threads];
-
-		float x_section = (2.0f * vw.aspx) / threads;
+		x_section = (2.0f * vw.aspx) / threads;
 		for (int i = 0; i < threads; i++)
 		{
 			thread_args[i].start = -vw.aspx + i * x_section;

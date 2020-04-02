@@ -1,7 +1,12 @@
 /*
-Main App
+Fractal / implict shape explorer
 
-SDF functions: https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+Controls:
+	+ / - : Increase / decrease voxels resolution. Tune it according to the performance.
+	Enter : Cycle shapes
+
+Sources:
+	SDF functions: https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
 */
 
 #include <stdlib.h>
@@ -16,14 +21,26 @@ typedef struct
 	float end;
 	voxie_frame_t *vf;
 	point3d voxel_size;
+	int func_idx;
 } iter_3d_thread_args;
 
 unsigned __stdcall iter_3d_threaded(void *args);
 
+static voxie_wind_t vw;
+
+// Shape drawing funcs
+#define DRAW_FUNCS_COUNT 3
 void draw_sphere(voxie_frame_t *vf, point3d p);
 void draw_torus(voxie_frame_t *vf, point3d p);
 void draw_box(voxie_frame_t *vf, point3d p);
 
+void (*draw_funcs[DRAW_FUNCS_COUNT])(voxie_frame_t *, point3d) = {
+	draw_sphere,
+	draw_torus,
+	draw_box
+};
+
+// Math funcs
 float length3d2(point3d p);
 float length3d(point3d p);
 float length2d(point2d p);
@@ -31,8 +48,7 @@ point3d abs3d(point3d p);
 point3d subtract3d(point3d a, point3d b);
 point3d max3d(point3d a, point3d b);
 
-static voxie_wind_t vw;
-
+// Entry point
 int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdshow)
 {
 	voxie_frame_t vf;
@@ -41,6 +57,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	char key;
 	point3d voxel_size;
 	float x_section;
+	int func_idx = 0;
 
 	if (voxie_load(&vw) < 0)
 		return -1;
@@ -61,6 +78,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	if (voxie_init(&vw) < 0)
 		return -1;
 
+	// Frames loop
 	while (!voxie_breath(&in))
 	{
 		otim = tim;
@@ -81,18 +99,24 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		
 		quality = fmaxf(fminf(quality, 3.0f), 0.0f);
 
+		if (key == 0xd) // Enter
+			func_idx++;
+		
+		func_idx %= DRAW_FUNCS_COUNT;
+
 		// Start frame
 		voxie_frame_start(&vf);
-		voxie_setview(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz);
+		voxie_setview(&vf, -vw.aspx, -vw.aspy, -vw.aspz, +vw.aspx, +vw.aspy, +vw.aspz);
 
 		// Draw volume bbox
-		voxie_drawbox(&vf,-vw.aspx,-vw.aspy,-vw.aspz,+vw.aspx,+vw.aspy,+vw.aspz,1,0xffffff);
+		voxie_drawbox(&vf, -vw.aspx, -vw.aspy, -vw.aspz, +vw.aspx, +vw.aspy, +vw.aspz, 1, 0xffffff);
 
-		// Do stuff here
+		// Voxel spacing
 		voxel_size.x = (2.0f * vw.aspx) / vw.xdim * (1.0f + quality * 4.0f);
 		voxel_size.y = (2.0f * vw.aspy) / vw.xdim * (1.0f + quality * 4.0f);
 		voxel_size.z = (2.0f * vw.aspz) / 200.0f * (1.0f + quality);
 
+		// Start threads
 		x_section = (2.0f * vw.aspx) / threads;
 		for (int i = 0; i < threads; i++)
 		{
@@ -100,6 +124,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 			thread_args[i].end = thread_args[i].start + x_section;
 			thread_args[i].vf = &vf;
 			thread_args[i].voxel_size = voxel_size;
+			thread_args[i].func_idx = func_idx;
 
 			thread_handles[i] = (HANDLE)_beginthreadex(NULL, 0, &iter_3d_threaded, &thread_args[i], 0, NULL);
 		}
@@ -131,7 +156,7 @@ unsigned __stdcall iter_3d_threaded(void *pargs)
 		{
 			for (p_world.z = -vw.aspz; p_world.z < vw.aspz; p_world.z += args->voxel_size.z)
 			{
-				draw_box(args->vf, p_world);
+				draw_funcs[args->func_idx](args->vf, p_world);
 			}
 		}
 	}
@@ -140,7 +165,6 @@ unsigned __stdcall iter_3d_threaded(void *pargs)
 }
 
 // Shape funcs
-
 void draw_sphere(voxie_frame_t *vf, point3d p)
 {
 	if (length3d(p) <= 0.3f)
@@ -159,7 +183,7 @@ void draw_torus(voxie_frame_t *vf, point3d p)
 
 void draw_box(voxie_frame_t *vf, point3d p)
 {
-	float r = 0.1f;
+	float r = 0.05f;
 	point3d b = {.x = 0.3f, .y = 0.4f, .z = 0.1f};
 	point3d q = subtract3d(abs3d(p), b);
 	
@@ -169,7 +193,6 @@ void draw_box(voxie_frame_t *vf, point3d p)
 }
 
 // Math funcs
-
 float length3d2(point3d p)
 {
 	return p.x*p.x + p.y*p.y + p.z*p.z;

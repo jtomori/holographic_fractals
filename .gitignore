@@ -1,3 +1,9 @@
+# Custom stuff
+System Volume Information
+sdk
+*.out
+analysis.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

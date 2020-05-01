@@ -1,12 +1,14 @@
 # Holographic Fractals
 Holographic fractals for Voxon volumetric display
 
+## Usage
+### Controls:
+* `+ / -` : Increase / decrease voxels resolution. Tune it according to the performance.
+* `Enter` : Cycle fractals, shapes
+
 ## Building
-VSCode has two tasks:
-* **gcc.exe build active file** - Release build
-* **gcc.exe build active file - debug, profiling** - Testing build, worse peformance, but debug and profiling info
-    * To debug press ``F5`` in VSCode
-    * To profile - run the exec, which will output ``gmon.out`` in the working directory and then run this command to generate ``analysis.txt`` file
-        ```
-        > gprof build\explorer.exe gmon.out > analysis.txt
-        ```
+MinGW compiler was used for this project, VSCode has two build tasks:
+* `gcc.exe build active file - release`
+* `gcc.exe build active file - debug`
+
+Using MSVC should be straighforward, PR welcome :)

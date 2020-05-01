@@ -1,5 +1,5 @@
 /*
-Fractal / implict shape explorer
+Holographic fractals explorer
 
 Controls:
 	+ / - : Increase / decrease voxels resolution. Tune it according to the performance.
@@ -29,21 +29,23 @@ unsigned __stdcall iter_3d_threaded(void *args);
 static voxie_wind_t vw;
 
 // Shape drawing funcs
-#define DRAW_FUNCS_COUNT 4
+#define DRAW_FUNCS_COUNT 5
 void draw_sphere(voxie_frame_t *vf, point3d p);
 void draw_torus(voxie_frame_t *vf, point3d p);
 void draw_box(voxie_frame_t *vf, point3d p);
-void draw_fractal(voxie_frame_t *vf, point3d p);
+void draw_mandelbulb(voxie_frame_t *vf, point3d p);
+void draw_bristorbrot(voxie_frame_t *vf, point3d p);
 
 // Fractals
-void mandelbulbIter(point3d *z, point3d p_in, float power);
-void bristorbrotIter(point3d *z, point3d p_in);
+void mandelbulb_iter(point3d *z, point3d p_in, float power);
+void bristorbrot_iter(point3d *z, point3d p_in);
 
 void (*draw_funcs[DRAW_FUNCS_COUNT])(voxie_frame_t *, point3d) = {
+	draw_bristorbrot,
+	draw_mandelbulb,
 	draw_sphere,
 	draw_torus,
-	draw_box,
-	draw_fractal
+	draw_box
 };
 
 // Math funcs
@@ -199,44 +201,51 @@ void draw_box(voxie_frame_t *vf, point3d p)
 		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
 }
 
-void draw_fractal(voxie_frame_t *vf, point3d p)
+void draw_mandelbulb(voxie_frame_t *vf, point3d p)
 {
-	int max_iterations = 15;
+	int max_iterations = 5;
+	int max_distance = 20;
+
+    point3d p_in = p;
+    point3d z = p_in;
+    float z_dist = length3d2(z);
+
+    int i = 0;
+    for (; i < max_iterations; i++)
+    {
+        mandelbulb_iter(&z, p_in, 8.0f);
+
+        z_dist = length3d2(z);
+        if (z_dist > max_distance) break;
+    }
+
+	if (i == max_iterations)
+		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+}
+
+void draw_bristorbrot(voxie_frame_t *vf, point3d p)
+{
+	int max_iterations = 30;
 	int max_distance = 200;
 
     point3d p_in = p;
     point3d z = p_in;
     float z_dist = length3d2(z);
 
-    float orbit_coord_dist = 100000.0f;
-    float orbit_sphere_dist = 100000.0f;
-	point3d orbit_sphere_center = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
-	float orbit_sphere_rad_sq = 4.0f;
     int i = 0;
-
     for (; i < max_iterations; i++)
     {
-        // mandelbulbIter(&z, p_in, 8.0f);
-		bristorbrotIter(&z, p_in);
-
-        // orbit traps
-        orbit_coord_dist = fminf(orbit_coord_dist, fabsf( length3d2( subtract3d(z, p_in) ) ));
-        orbit_sphere_dist = fminf(orbit_sphere_dist, fabsf( length3d2( subtract3d(z, orbit_sphere_center) ) - orbit_sphere_rad_sq));
+        bristorbrot_iter(&z, p_in);
 
         z_dist = length3d2(z);
         if (z_dist > max_distance) break;
     }
 
-    orbit_coord_dist = sqrtf(orbit_coord_dist);
-    orbit_sphere_dist = sqrtf(orbit_sphere_dist);
-
-    float mask = i == max_iterations ? 1.0f : 0.0f;
-
-	if (mask == 1.0f)
+	if (i == max_iterations)
 		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
 }
 
-void mandelbulbIter(point3d *z, point3d p_in, float power)
+void mandelbulb_iter(point3d *z, point3d p_in, float power)
 {
     point3d z_orig = *z;
     
@@ -257,7 +266,7 @@ void mandelbulbIter(point3d *z, point3d p_in, float power)
 	*z = add3d(new_p, p_in);
 }
 
-void bristorbrotIter(point3d *z, point3d p_in)
+void bristorbrot_iter(point3d *z, point3d p_in)
 {
     point3d z_orig = *z;
     

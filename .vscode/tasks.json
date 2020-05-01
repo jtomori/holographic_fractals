@@ -2,7 +2,7 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "gcc.exe build active file",
+            "label": "gcc.exe build active file - release",
             "command": "C:\\mingw-w64\\x86_64-8.1.0-win32-seh-rt_v6-rev0\\mingw64\\bin\\gcc.exe",
             "args": [
                 "-g",
@@ -26,7 +26,7 @@
         },
         {
             "type": "shell",
-            "label": "gcc.exe build active file - debug, profiling",
+            "label": "gcc.exe build active file - debug",
             "command": "C:\\mingw-w64\\x86_64-8.1.0-win32-seh-rt_v6-rev0\\mingw64\\bin\\gcc.exe",
             "args": [
                 "-g",

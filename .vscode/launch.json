@@ -23,7 +23,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "gcc.exe build active file - debug, profiling"
+            "preLaunchTask": "gcc.exe build active file - debug"
         }
     ]
 }

@@ -45,8 +45,7 @@ void (*draw_funcs[DRAW_FUNCS_COUNT])(voxie_frame_t *, point3d) = {
 	draw_mandelbulb,
 	draw_sphere,
 	draw_torus,
-	draw_box
-};
+	draw_box};
 
 // Math funcs
 float length3d2(point3d p);
@@ -71,8 +70,8 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	if (voxie_load(&vw) < 0)
 		return -1;
 
-    // Default settings
-    vw.usecol = 1; // Color rendering
+	// Default settings
+	vw.usecol = 1; // Color rendering
 	vw.useemu = 2; // Simulation
 	float quality = 1.0f;
 
@@ -92,7 +91,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	{
 		otim = tim;
 		tim = voxie_klock();
-		dtim = tim-otim;
+		dtim = tim - otim;
 
 		// Key presses
 		// printf("%d %x\n", key, key);
@@ -105,12 +104,12 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 			quality += 0.25f;
 		if (key == 0x2b) // +
 			quality -= 0.25f;
-		
+
 		quality = fmaxf(fminf(quality, 3.0f), 0.0f);
 
 		if (key == 0xd) // Enter
 			func_idx++;
-		
+
 		func_idx %= DRAW_FUNCS_COUNT;
 
 		// Start frame
@@ -157,7 +156,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 unsigned __stdcall iter_3d_threaded(void *pargs)
 {
 	iter_3d_thread_args *args = (iter_3d_thread_args *)pargs;
-	
+
 	point3d p_world;
 	for (p_world.x = args->start; p_world.x < args->end; p_world.x += args->voxel_size.x)
 	{
@@ -195,7 +194,7 @@ void draw_box(voxie_frame_t *vf, point3d p)
 	float r = 0.05f;
 	point3d b = {.x = 0.3f, .y = 0.4f, .z = 0.1f};
 	point3d q = subtract3d(abs3d(p), b);
-	
+
 	float sdf = length3d(max3d(q, (point3d){.x = 0.0f, .y = 0.0f, .z = 0.0f})) + fminf(fmaxf(q.x, fmaxf(q.y, q.z)), 0.0f) - r;
 	if (sdf <= 0.0f)
 		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
@@ -206,18 +205,19 @@ void draw_mandelbulb(voxie_frame_t *vf, point3d p)
 	int max_iterations = 5;
 	int max_distance = 20;
 
-    point3d p_in = p;
-    point3d z = p_in;
-    float z_dist = length3d2(z);
+	point3d p_in = p;
+	point3d z = p_in;
+	float z_dist = length3d2(z);
 
-    int i = 0;
-    for (; i < max_iterations; i++)
-    {
-        mandelbulb_iter(&z, p_in, 8.0f);
+	int i = 0;
+	for (; i < max_iterations; i++)
+	{
+		mandelbulb_iter(&z, p_in, 8.0f);
 
-        z_dist = length3d2(z);
-        if (z_dist > max_distance) break;
-    }
+		z_dist = length3d2(z);
+		if (z_dist > max_distance)
+			break;
+	}
 
 	if (i == max_iterations)
 		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
@@ -228,18 +228,19 @@ void draw_bristorbrot(voxie_frame_t *vf, point3d p)
 	int max_iterations = 30;
 	int max_distance = 200;
 
-    point3d p_in = p;
-    point3d z = p_in;
-    float z_dist = length3d2(z);
+	point3d p_in = p;
+	point3d z = p_in;
+	float z_dist = length3d2(z);
 
-    int i = 0;
-    for (; i < max_iterations; i++)
-    {
-        bristorbrot_iter(&z, p_in);
+	int i = 0;
+	for (; i < max_iterations; i++)
+	{
+		bristorbrot_iter(&z, p_in);
 
-        z_dist = length3d2(z);
-        if (z_dist > max_distance) break;
-    }
+		z_dist = length3d2(z);
+		if (z_dist > max_distance)
+			break;
+	}
 
 	if (i == max_iterations)
 		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
@@ -247,56 +248,56 @@ void draw_bristorbrot(voxie_frame_t *vf, point3d p)
 
 void mandelbulb_iter(point3d *z, point3d p_in, float power)
 {
-    point3d z_orig = *z;
-    
-    float distance = length3d(*z);
+	point3d z_orig = *z;
 
-    // convert to polar coordinates
-    float theta = acosf(z->z / distance);
-    float phi = atan2f(z->y, z->x);
-    
-    // scale and rotate the point
-    float zr = powf(distance, power);
-    theta *= power;
-    phi *= power;
-    
-    // convert back to cartesian coordinates
-    point3d new_p = (point3d){.x = sinf(theta)*cosf(phi)*zr, .y = sinf(phi)*sinf(theta)*zr, .z = cosf(theta)*zr };
+	float distance = length3d(*z);
+
+	// convert to polar coordinates
+	float theta = acosf(z->z / distance);
+	float phi = atan2f(z->y, z->x);
+
+	// scale and rotate the point
+	float zr = powf(distance, power);
+	theta *= power;
+	phi *= power;
+
+	// convert back to cartesian coordinates
+	point3d new_p = (point3d){.x = sinf(theta) * cosf(phi) * zr, .y = sinf(phi) * sinf(theta) * zr, .z = cosf(theta) * zr};
 
 	*z = add3d(new_p, p_in);
 }
 
 void bristorbrot_iter(point3d *z, point3d p_in)
 {
-    point3d z_orig = *z;
-    
-    point3d new_p;
-    new_p.x = z->x * z->x - z->y * z->y - z->z * z->z;
-    new_p.y = z->y * (2.0f * z->x - z->z);
-    new_p.z = z->z * (2.0f * z->x + z->y);
-    
-    *z = add3d(new_p, p_in);
+	point3d z_orig = *z;
+
+	point3d new_p;
+	new_p.x = z->x * z->x - z->y * z->y - z->z * z->z;
+	new_p.y = z->y * (2.0f * z->x - z->z);
+	new_p.z = z->z * (2.0f * z->x + z->y);
+
+	*z = add3d(new_p, p_in);
 }
 
 // Math funcs
 float length3d2(point3d p)
 {
-	return p.x*p.x + p.y*p.y + p.z*p.z;
+	return p.x * p.x + p.y * p.y + p.z * p.z;
 }
 
 float length3d(point3d p)
 {
-	return sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
+	return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
 }
 
 float length2d(point2d p)
 {
-	return sqrt(p.x*p.x + p.y*p.y);
+	return sqrt(p.x * p.x + p.y * p.y);
 }
 
 point3d abs3d(point3d p)
 {
-	return (point3d){.x = fabsf(p.x), .y = fabsf(p.y), .z = fabsf(p.z)}; 
+	return (point3d){.x = fabsf(p.x), .y = fabsf(p.y), .z = fabsf(p.z)};
 }
 
 point3d add3d(point3d a, point3d b)

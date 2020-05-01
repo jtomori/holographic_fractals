@@ -29,15 +29,21 @@ unsigned __stdcall iter_3d_threaded(void *args);
 static voxie_wind_t vw;
 
 // Shape drawing funcs
-#define DRAW_FUNCS_COUNT 3
+#define DRAW_FUNCS_COUNT 4
 void draw_sphere(voxie_frame_t *vf, point3d p);
 void draw_torus(voxie_frame_t *vf, point3d p);
 void draw_box(voxie_frame_t *vf, point3d p);
+void draw_fractal(voxie_frame_t *vf, point3d p);
+
+// Fractals
+void mandelbulbIter(point3d *z, point3d p_in, float power);
+void bristorbrotIter(point3d *z, point3d p_in);
 
 void (*draw_funcs[DRAW_FUNCS_COUNT])(voxie_frame_t *, point3d) = {
 	draw_sphere,
 	draw_torus,
-	draw_box
+	draw_box,
+	draw_fractal
 };
 
 // Math funcs
@@ -45,6 +51,7 @@ float length3d2(point3d p);
 float length3d(point3d p);
 float length2d(point2d p);
 point3d abs3d(point3d p);
+point3d add3d(point3d a, point3d b);
 point3d subtract3d(point3d a, point3d b);
 point3d max3d(point3d a, point3d b);
 
@@ -192,6 +199,76 @@ void draw_box(voxie_frame_t *vf, point3d p)
 		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
 }
 
+void draw_fractal(voxie_frame_t *vf, point3d p)
+{
+	int max_iterations = 15;
+	int max_distance = 200;
+
+    point3d p_in = p;
+    point3d z = p_in;
+    float z_dist = length3d2(z);
+
+    float orbit_coord_dist = 100000.0f;
+    float orbit_sphere_dist = 100000.0f;
+	point3d orbit_sphere_center = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
+	float orbit_sphere_rad_sq = 4.0f;
+    int i = 0;
+
+    for (; i < max_iterations; i++)
+    {
+        // mandelbulbIter(&z, p_in, 8.0f);
+		bristorbrotIter(&z, p_in);
+
+        // orbit traps
+        orbit_coord_dist = fminf(orbit_coord_dist, fabsf( length3d2( subtract3d(z, p_in) ) ));
+        orbit_sphere_dist = fminf(orbit_sphere_dist, fabsf( length3d2( subtract3d(z, orbit_sphere_center) ) - orbit_sphere_rad_sq));
+
+        z_dist = length3d2(z);
+        if (z_dist > max_distance) break;
+    }
+
+    orbit_coord_dist = sqrtf(orbit_coord_dist);
+    orbit_sphere_dist = sqrtf(orbit_sphere_dist);
+
+    float mask = i == max_iterations ? 1.0f : 0.0f;
+
+	if (mask == 1.0f)
+		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+}
+
+void mandelbulbIter(point3d *z, point3d p_in, float power)
+{
+    point3d z_orig = *z;
+    
+    float distance = length3d(*z);
+
+    // convert to polar coordinates
+    float theta = acosf(z->z / distance);
+    float phi = atan2f(z->y, z->x);
+    
+    // scale and rotate the point
+    float zr = powf(distance, power);
+    theta *= power;
+    phi *= power;
+    
+    // convert back to cartesian coordinates
+    point3d new_p = (point3d){.x = sinf(theta)*cosf(phi)*zr, .y = sinf(phi)*sinf(theta)*zr, .z = cosf(theta)*zr };
+
+	*z = add3d(new_p, p_in);
+}
+
+void bristorbrotIter(point3d *z, point3d p_in)
+{
+    point3d z_orig = *z;
+    
+    point3d new_p;
+    new_p.x = z->x * z->x - z->y * z->y - z->z * z->z;
+    new_p.y = z->y * (2.0f * z->x - z->z);
+    new_p.z = z->z * (2.0f * z->x + z->y);
+    
+    *z = add3d(new_p, p_in);
+}
+
 // Math funcs
 float length3d2(point3d p)
 {
@@ -211,6 +288,11 @@ float length2d(point2d p)
 point3d abs3d(point3d p)
 {
 	return (point3d){.x = fabsf(p.x), .y = fabsf(p.y), .z = fabsf(p.z)}; 
+}
+
+point3d add3d(point3d a, point3d b)
+{
+	return (point3d){.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
 }
 
 point3d subtract3d(point3d a, point3d b)

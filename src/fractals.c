@@ -54,6 +54,8 @@ float length2d(point2d p);
 point3d abs3d(point3d p);
 point3d add3d(point3d a, point3d b);
 point3d subtract3d(point3d a, point3d b);
+point3d multiply3d(point3d a, float b);
+point3d divide3d(point3d a, float b);
 point3d max3d(point3d a, point3d b);
 
 // Entry point
@@ -72,7 +74,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
 	// Default settings
 	vw.usecol = 1; // Color rendering
-	vw.useemu = 2; // Simulation
+	vw.useemu = 1; // Simulation
 	float quality = 1.0f;
 
 	// Threads count
@@ -202,10 +204,11 @@ void draw_box(voxie_frame_t *vf, point3d p)
 
 void draw_mandelbulb(voxie_frame_t *vf, point3d p)
 {
-	int max_iterations = 5;
+	int max_iterations = 4;
 	int max_distance = 20;
+	float scale = 0.33f;
 
-	point3d p_in = p;
+	point3d p_in = divide3d(p, scale);
 	point3d z = p_in;
 	float z_dist = length3d2(z);
 
@@ -227,8 +230,9 @@ void draw_bristorbrot(voxie_frame_t *vf, point3d p)
 {
 	int max_iterations = 30;
 	int max_distance = 200;
+	float scale = 0.33f;
 
-	point3d p_in = p;
+	point3d p_in = divide3d(p, scale);
 	point3d z = p_in;
 	float z_dist = length3d2(z);
 
@@ -308,6 +312,16 @@ point3d add3d(point3d a, point3d b)
 point3d subtract3d(point3d a, point3d b)
 {
 	return (point3d){a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+point3d multiply3d(point3d a, float b)
+{
+	return (point3d){a.x * b, a.y * b, a.z * b};
+}
+
+point3d divide3d(point3d a, float b)
+{
+	return (point3d){a.x / b, a.y / b, a.z / b};
 }
 
 point3d max3d(point3d a, point3d b)

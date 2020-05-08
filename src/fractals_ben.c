@@ -1,9 +1,19 @@
+#if 0
+fractals_ben.exe: fractals_ben.c voxiebox.h; cl /TP fractals_ben.c /Ox /MT /link user32.lib
+	del fractals_ben.obj
+#fractals.exe : fractals.c; \Dev - Cpp\bin\gcc fractals.c - o fractals.exe - pipe - O3 - s
+!if 0
+#endif
+
 /*
-Holographic fractals explorer
+Holographic fractals explorer by Ben Weatherall
 
 Controls:
 	+ / - : Increase / decrease voxels resolution. Tune it according to the performance.
 	Enter : Cycle shapes
+	PGUP/PGDN, Spacenav buts: scale
+	Spacenav: modify pos&ori
+	Shift/Ctrl + [/] etc : Adjust emulation view
 
 Sources:
 	SDF functions: https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
@@ -17,10 +27,9 @@ Sources:
 
 typedef struct
 {
-	float start;
-	float end;
+	float start, end;
 	voxie_frame_t *vf;
-	point3d voxel_size;
+	point3d voxel_size, pp, pr, pd, pf;
 	int func_idx;
 } iter_3d_thread_args;
 
@@ -30,20 +39,20 @@ static voxie_wind_t vw;
 
 // Shape drawing funcs
 #define DRAW_FUNCS_COUNT 5
-void draw_sphere(voxie_frame_t *vf, point3d p);
-void draw_torus(voxie_frame_t *vf, point3d p);
-void draw_box(voxie_frame_t *vf, point3d p);
-void draw_mandelbulb(voxie_frame_t *vf, point3d p);
-void draw_bristorbrot(voxie_frame_t *vf, point3d p);
+int draw_sphere(voxie_frame_t *vf, point3d p);
+int draw_torus(voxie_frame_t *vf, point3d p);
+int draw_box(voxie_frame_t *vf, point3d p);
+int draw_mandelbulb(voxie_frame_t *vf, point3d p);
+int draw_bristorbrot(voxie_frame_t *vf, point3d p);
 
 // Fractals
 void mandelbulb_iter(point3d *z, point3d p_in, float power);
 void bristorbrot_iter(point3d *z, point3d p_in);
 
-void (*draw_funcs[DRAW_FUNCS_COUNT])(voxie_frame_t *, point3d) = {
+int (*draw_funcs[DRAW_FUNCS_COUNT])(voxie_frame_t *, point3d) = {
+	draw_sphere,
 	draw_bristorbrot,
 	draw_mandelbulb,
-	draw_sphere,
 	draw_torus,
 	draw_box};
 
@@ -56,6 +65,27 @@ point3d add3d(point3d a, point3d b);
 point3d subtract3d(point3d a, point3d b);
 point3d max3d(point3d a, point3d b);
 
+#define PI 3.14159265358979323
+
+//Rotate vectors a & b around their common plane, by ang
+static void rotate_vex(float ang, point3d *a, point3d *b)
+{
+	float f, c, s;
+	int i;
+
+	c = cos(ang);
+	s = sin(ang);
+	f = a->x;
+	a->x = f * c + b->x * s;
+	b->x = b->x * c - f * s;
+	f = a->y;
+	a->y = f * c + b->y * s;
+	b->y = b->y * c - f * s;
+	f = a->z;
+	a->z = f * c + b->z * s;
+	b->z = b->z * c - f * s;
+}
+
 // Entry point
 int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdshow)
 {
@@ -63,16 +93,18 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	voxie_inputs_t in;
 	double tim = 0.0, otim, dtim;
 	char key;
-	point3d voxel_size;
-	float x_section;
-	int func_idx = 0;
+	point3d voxel_size, pp = {0.f, 0.f, 0.f}, pr = {1.f, 0.f, 0.f}, pd = {0.f, 1.f, 0.f}, pf = {0.f, 0.f, 1.f};
+	float x_section, scale = 1.f;
+	int i, func_idx = 0;
+	voxie_nav_t nav[4] = {0};
+	int onavbut[4];
 
 	if (voxie_load(&vw) < 0)
 		return -1;
 
 	// Default settings
 	vw.usecol = 1; // Color rendering
-	vw.useemu = 2; // Simulation
+	vw.useemu = 1; // Simulation
 	float quality = 1.0f;
 
 	// Threads count
@@ -80,8 +112,8 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 	GetSystemInfo(&sysinfo);
 	int threads = max(1, sysinfo.dwNumberOfProcessors - 1);
 
-	HANDLE thread_handles[threads];
-	iter_3d_thread_args thread_args[threads];
+	HANDLE thread_handles[16];			 //threads];
+	iter_3d_thread_args thread_args[16]; //threads];
 
 	if (voxie_init(&vw) < 0)
 		return -1;
@@ -93,6 +125,24 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		tim = voxie_klock();
 		dtim = tim - otim;
 
+		i = (voxie_keystat(0x1b) & 1) - (voxie_keystat(0x1a) & 1);
+		if (i)
+		{
+			if (voxie_keystat(0x2a) | voxie_keystat(0x36))
+				vw.emuvang = min(max(vw.emuvang + (float)i * dtim * 2.0, -PI * .5), 0.1268); //Shift+[,]
+			else if (voxie_keystat(0x1d) | voxie_keystat(0x9d))
+				vw.emudist = max(vw.emudist - (float)i * dtim * 2048.0, 400.0); //Ctrl+[,]
+			else
+				vw.emuhang += (float)i * dtim * 2.0; //[,]
+			voxie_init(&vw);
+		}
+
+		for (i = 0; i < 4; i++)
+		{
+			onavbut[i] = nav[i].but;
+			voxie_nav_read(i, &nav[i]);
+		}
+
 		// Key presses
 		// printf("%d %x\n", key, key);
 
@@ -100,15 +150,51 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 			voxie_quitloop(); // ESC quit
 
 		key = (char)voxie_keyread();
-		if (key == 0x2d) // -
-			quality += 0.25f;
-		if (key == 0x2b) // +
-			quality -= 0.25f;
+		if (key == 0x2d)
+			quality += 0.25f; // -
+		if (key == 0x2b)
+			quality -= 0.25f; // +
+
+		if (voxie_keystat(0xd1) || (nav[0].but & 1))
+			scale *= pow(1.5, dtim); //PGDN
+		if (voxie_keystat(0xc9) || (nav[0].but & 2))
+			scale /= pow(1.5, dtim); //PGUP
+		float fx, fy, fz;
+		fx = nav[0].dx * dtim * -.001f;
+		fy = nav[0].dy * dtim * -.001f;
+		fz = nav[0].dz * dtim * -.001f;
+		pp.x += fx * pr.x + fy * pr.y + fz * pr.z;
+		pp.y += fx * pd.x + fy * pd.y + fz * pd.z;
+		pp.z += fx * pf.x + fy * pf.y + fz * pf.z;
+
+		//Hacks for nice matrix movement with Space Navigator
+		float f;
+		f = pr.y;
+		pr.y = pd.x;
+		pd.x = f;
+		f = pr.z;
+		pr.z = pf.x;
+		pf.x = f;
+		f = pd.z;
+		pd.z = pf.y;
+		pf.y = f;
+		rotate_vex(nav[0].az * dtim * -.005f, &pr, &pd);
+		rotate_vex(nav[0].ay * dtim * -.005f, &pd, &pf);
+		rotate_vex(nav[0].ax * dtim * +.005f, &pf, &pr);
+		f = pr.y;
+		pr.y = pd.x;
+		pd.x = f;
+		f = pr.z;
+		pr.z = pf.x;
+		pf.x = f;
+		f = pd.z;
+		pd.z = pf.y;
+		pf.y = f;
 
 		quality = fmaxf(fminf(quality, 3.0f), 0.0f);
 
-		if (key == 0xd) // Enter
-			func_idx++;
+		if (key == 0xd)
+			func_idx++; // Enter
 
 		func_idx %= DRAW_FUNCS_COUNT;
 
@@ -126,13 +212,23 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 
 		// Start threads
 		x_section = (2.0f * vw.aspx) / threads;
-		for (int i = 0; i < threads; i++)
+		for (i = 0; i < threads; i++)
 		{
 			thread_args[i].start = -vw.aspx + i * x_section;
 			thread_args[i].end = thread_args[i].start + x_section;
 			thread_args[i].vf = &vf;
 			thread_args[i].voxel_size = voxel_size;
 			thread_args[i].func_idx = func_idx;
+			thread_args[i].pp = pp;
+			thread_args[i].pr.x = pr.x * scale;
+			thread_args[i].pr.y = pr.y * scale;
+			thread_args[i].pr.z = pr.z * scale;
+			thread_args[i].pd.x = pd.x * scale;
+			thread_args[i].pd.y = pd.y * scale;
+			thread_args[i].pd.z = pd.z * scale;
+			thread_args[i].pf.x = pf.x * scale;
+			thread_args[i].pf.y = pf.y * scale;
+			thread_args[i].pf.z = pf.z * scale;
 
 			thread_handles[i] = (HANDLE)_beginthreadex(NULL, 0, &iter_3d_threaded, &thread_args[i], 0, NULL);
 		}
@@ -140,7 +236,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsho
 		// Wait for threads to finish up
 		WaitForMultipleObjects(threads, thread_handles, TRUE, INFINITE);
 
-		for (int i = 0; i < threads; i++)
+		for (i = 0; i < threads; i++)
 		{
 			CloseHandle(thread_handles[i]);
 		}
@@ -158,49 +254,70 @@ unsigned __stdcall iter_3d_threaded(void *pargs)
 	iter_3d_thread_args *args = (iter_3d_thread_args *)pargs;
 
 	point3d p_world;
+	poltex_t vt[4096];
+	int vtn = 0;
 	for (p_world.x = args->start; p_world.x < args->end; p_world.x += args->voxel_size.x)
 	{
 		for (p_world.y = -vw.aspy; p_world.y < vw.aspy; p_world.y += args->voxel_size.y)
 		{
 			for (p_world.z = -vw.aspz; p_world.z < vw.aspz; p_world.z += args->voxel_size.z)
 			{
-				draw_funcs[args->func_idx](args->vf, p_world);
+				if (draw_funcs[args->func_idx](args->vf, p_world))
+				{
+					float fx, fy, fz;
+					fx = p_world.x - args->pp.x;
+					fy = p_world.y - args->pp.y;
+					fz = p_world.z - args->pp.z;
+					vt[vtn].x = fx * args->pr.x + fy * args->pd.x + fz * args->pf.x;
+					vt[vtn].y = fx * args->pr.y + fy * args->pd.y + fz * args->pf.y;
+					vt[vtn].z = fx * args->pr.z + fy * args->pd.z + fz * args->pf.z;
+					vt[vtn].col = 0xffffff;
+					vtn++;
+					if (vtn >= sizeof(vt) / sizeof(vt[0]))
+					{
+						voxie_drawmeshtex(args->vf, 0, vt, vtn, 0, 0, 0, 0xffffff);
+						vtn = 0;
+					}
+				}
 			}
 		}
 	}
+	if (vtn)
+	{
+		voxie_drawmeshtex(args->vf, 0, vt, vtn, 0, 0, 0, 0xffffff);
+	}
+
 	_endthreadex(0);
 	return 0;
 }
 
 // Shape funcs
-void draw_sphere(voxie_frame_t *vf, point3d p)
+int draw_sphere(voxie_frame_t *vf, point3d p)
 {
-	if (length3d(p) <= 0.3f)
-		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+	return (length3d(p) <= 0.3f);
 }
 
-void draw_torus(voxie_frame_t *vf, point3d p)
+int draw_torus(voxie_frame_t *vf, point3d p)
 {
 	point2d t = {0.2f, 0.1f};
 	point2d pxz = {p.x, p.z};
 	point2d q = {length2d(pxz) - t.x, p.y};
 
-	if (length2d(q) - t.y <= 0.0f)
-		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+	return (length2d(q) - t.y <= 0.0f);
 }
 
-void draw_box(voxie_frame_t *vf, point3d p)
+int draw_box(voxie_frame_t *vf, point3d p)
 {
 	float r = 0.05f;
 	point3d b = {0.3f, 0.4f, 0.1f};
 	point3d q = subtract3d(abs3d(p), b);
 
-	float sdf = length3d(max3d(q, (point3d){0.0f, 0.0f, 0.0f})) + fminf(fmaxf(q.x, fmaxf(q.y, q.z)), 0.0f) - r;
-	if (sdf <= 0.0f)
-		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+	point3d s = {0.f, 0.f, 0.f};
+	float sdf = length3d(max3d(q, s)) + fminf(fmaxf(q.x, fmaxf(q.y, q.z)), 0.0f) - r;
+	return (sdf <= 0.0f);
 }
 
-void draw_mandelbulb(voxie_frame_t *vf, point3d p)
+int draw_mandelbulb(voxie_frame_t *vf, point3d p)
 {
 	int max_iterations = 5;
 	int max_distance = 20;
@@ -219,11 +336,10 @@ void draw_mandelbulb(voxie_frame_t *vf, point3d p)
 			break;
 	}
 
-	if (i == max_iterations)
-		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+	return (i == max_iterations);
 }
 
-void draw_bristorbrot(voxie_frame_t *vf, point3d p)
+int draw_bristorbrot(voxie_frame_t *vf, point3d p)
 {
 	int max_iterations = 30;
 	int max_distance = 200;
@@ -242,8 +358,7 @@ void draw_bristorbrot(voxie_frame_t *vf, point3d p)
 			break;
 	}
 
-	if (i == max_iterations)
-		voxie_drawvox(vf, p.x, p.y, p.z, 0x00ff00);
+	return (i == max_iterations);
 }
 
 void mandelbulb_iter(point3d *z, point3d p_in, float power)
@@ -262,7 +377,7 @@ void mandelbulb_iter(point3d *z, point3d p_in, float power)
 	phi *= power;
 
 	// convert back to cartesian coordinates
-	point3d new_p = (point3d){sinf(theta) * cosf(phi) * zr, sinf(phi) * sinf(theta) * zr, cosf(theta) * zr};
+	point3d new_p = {sinf(theta) * cosf(phi) * zr, sinf(phi) * sinf(theta) * zr, cosf(theta) * zr};
 
 	*z = add3d(new_p, p_in);
 }
@@ -297,20 +412,28 @@ float length2d(point2d p)
 
 point3d abs3d(point3d p)
 {
-	return (point3d){fabsf(p.x), fabsf(p.y), fabsf(p.z)};
+	point3d q = {fabsf(p.x), fabsf(p.y), fabsf(p.z)};
+	return q;
 }
 
 point3d add3d(point3d a, point3d b)
 {
-	return (point3d){a.x + b.x, a.y + b.y, a.z + b.z};
+	point3d q = {a.x + b.x, a.y + b.y, a.z + b.z};
+	return q;
 }
 
 point3d subtract3d(point3d a, point3d b)
 {
-	return (point3d){a.x - b.x, a.y - b.y, a.z - b.z};
+	point3d q = {a.x - b.x, a.y - b.y, a.z - b.z};
+	return q;
 }
 
 point3d max3d(point3d a, point3d b)
 {
-	return (point3d){fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z)};
+	point3d q = {fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z)};
+	return q;
 }
+
+#if 0
+!endif
+#endif

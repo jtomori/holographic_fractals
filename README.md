@@ -7,8 +7,9 @@ Holographic fractals for Voxon volumetric display
 * `Enter` : Cycle fractals, shapes
 
 ## Building
-MinGW compiler was used for this project, VSCode has two build tasks:
+VSCode has two build tasks:
 * `gcc.exe build active file - release`
 * `gcc.exe build active file - debug`
 
-Using MSVC should be straighforward, PR welcome :)
+## Credits
+The project was started by [Juraj Tomori](https://github.com/jtomori) and it received many modifications & optimizations from [Ken Silverman](http://advsys.net/ken/) and [Ben Weatherall](https://github.com/mrAllWeather).
